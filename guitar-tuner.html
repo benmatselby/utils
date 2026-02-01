@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Instrument Tuner</title>
+    <style>
+        :root {
+            --primary: #008844; /* Deeper, more subtle green for Dark Mode */
+            --bg: #121212;
+            --card: #1e1e1e;
+            --text: #ffffff;
+            --danger: #ff4444;
+            --headstock: #332211;
+            --peg-idle: #444;
+        }
+
+        body.light-mode {
+            --primary: #6200ea; /* Deep Purple for Light Mode */
+            --bg: #f0f0f0;
+            --card: #ffffff;
+            --text: #121212;
+            --headstock: #5d4037;
+            --peg-idle: #bdbdbd;
+        }
+
+        body {
+            font-family: -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 24px;
+            width: 320px;
+            border: 1px solid rgba(128,128,128,0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+
+        .top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+        #themeToggle {
+            background: rgba(128,128,128,0.2); border: none; color: var(--text); padding: 8px 12px;
+            border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+        }
+
+        .mode-switch { display: flex; background: rgba(128,128,128,0.1); border-radius: 12px; padding: 4px; flex-grow: 1; margin-right: 10px; }
+        .mode-btn { flex: 1; padding: 8px; border: none; background: none; color: #888; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        .mode-btn.active { background: var(--primary); color: #fff; transition: background 0.3s; }
+
+        .headstock-container { height: 180px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+        svg { height: 100%; }
+        .peg { fill: var(--peg-idle); cursor: pointer; transition: fill 0.2s; }
+        .peg.active { fill: var(--primary); filter: drop-shadow(0 0 3px var(--primary)); }
+        .head-shape { fill: var(--headstock); stroke: rgba(0,0,0,0.2); stroke-width: 1; transition: fill 0.3s; }
+        .label { fill: #888; font-size: 9px; font-weight: bold; pointer-events: none; }
+
+        .note { font-size: 5rem; font-weight: 900; line-height: 1; margin: 10px 0; height: 80px; }
+        .meter { width: 100%; height: 8px; background: rgba(128,128,128,0.2); border-radius: 4px; margin: 20px 0; position: relative; overflow: hidden; }
+        .needle { width: 4px; height: 100%; background: var(--danger); position: absolute; left: 50%; transform: translateX(-50%); transition: background 0.2s; }
+
+        #startBtn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-controls">
+        <div class="mode-switch">
+            <button id="btn-guitar" class="mode-btn" onclick="setMode('guitar')">Guitar</button>
+            <button id="btn-ukulele" class="mode-btn" onclick="setMode('ukulele')">Uke</button>
+        </div>
+        <button id="themeToggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="headstock-container">
+        <svg id="svg-guitar" viewBox="0 0 100 150">
+            <path class="head-shape" d="M30,140 L70,140 L80,30 Q80,10 50,10 Q20,10 20,30 Z" />
+            <circle id="peg-40" class="peg" cx="25" cy="110" r="6" onclick="playTone(82.41)" /> <text x="10" y="113" class="label">E</text>
+            <circle id="peg-45" class="peg" cx="25" cy="75" r="6" onclick="playTone(110.00)" /> <text x="10" y="78" class="label">A</text>
+            <circle id="peg-50" class="peg" cx="25" cy="40" r="6" onclick="playTone(146.83)" /> <text x="10" y="43" class="label">D</text>
+            <circle id="peg-64" class="peg" cx="75" cy="110" r="6" onclick="playTone(329.63)" /> <text x="86" y="113" class="label">E</text>
+            <circle id="peg-59" class="peg" cx="75" cy="75" r="6" onclick="playTone(246.94)" /> <text x="86" y="78" class="label">B</text>
+            <circle id="peg-55" class="peg" cx="75" cy="40" r="6" onclick="playTone(196.00)" /> <text x="86" y="43" class="label">G</text>
+        </svg>
+
+        <svg id="svg-ukulele" viewBox="0 0 100 150" class="hidden">
+            <path class="head-shape" d="M35,140 L65,140 L75,40 Q75,15 50,15 Q25,15 25,40 Z" />
+            <circle id="peg-67" class="peg" cx="30" cy="90" r="7" onclick="playTone(392.00)" /> <text x="10" y="93" class="label">G</text>
+            <circle id="peg-60" class="peg" cx="30" cy="50" r="7" onclick="playTone(261.63)" /> <text x="10" y="53" class="label">C</text>
+            <circle id="peg-69" class="peg" cx="70" cy="90" r="7" onclick="playTone(440.00)" /> <text x="82" y="93" class="label">A</text>
+            <circle id="peg-64-u" class="peg" cx="70" cy="50" r="7" onclick="playTone(329.63)" /> <text x="82" y="53" class="label">E</text>
+        </svg>
+    </div>
+
+    <div id="tuner-ui" class="hidden">
+        <div id="note" class="note">--</div>
+        <div class="meter"><div id="needle" class="needle"></div></div>
+    </div>
+
+    <button id="startBtn">START TUNER</button>
+</div>
+
+<script>
+    let currentMode = 'guitar';
+    const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    let audioCtx, analyser;
+
+    let smoothedDiff = 0;
+    let inTuneTimer = 0;
+    let lastChimeTime = 0;
+
+    function savePreferences() {
+        const prefs = { mode: currentMode, lightMode: document.body.classList.contains('light-mode') };
+        localStorage.setItem('tunerPrefs', JSON.stringify(prefs));
+    }
+
+    function loadPreferences() {
+        const saved = localStorage.getItem('tunerPrefs');
+        if (saved) {
+            const prefs = JSON.parse(saved);
+            if (prefs.lightMode) {
+                document.body.classList.add('light-mode');
+                document.getElementById('themeToggle').innerText = "☀️";
+            }
+            setMode(prefs.mode || 'guitar');
+        } else {
+            setMode('guitar');
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        document.getElementById('themeToggle').innerText = document.body.classList.contains('light-mode') ? "☀️" : "🌙";
+        savePreferences();
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('btn-guitar').classList.toggle('active', mode === 'guitar');
+        document.getElementById('btn-ukulele').classList.toggle('active', mode === 'ukulele');
+        document.getElementById('svg-guitar').classList.toggle('hidden', mode !== 'guitar');
+        document.getElementById('svg-ukulele').classList.toggle('hidden', mode === 'guitar');
+        document.querySelectorAll('.peg').forEach(p => p.classList.remove('active'));
+        savePreferences();
+    }
+
+    function playTone(freq, isChime = false) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = isChime ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        const vol = isChime ? 0.1 : 0.15;
+        const duration = isChime ? 0.5 : 1.2;
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true }
+            });
+            const source = audioCtx.createMediaStreamSource(stream);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 4096;
+            source.connect(analyser);
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('tuner-ui').classList.remove('hidden');
+            updatePitch();
+        } catch (err) { alert("Microphone access required."); }
+    });
+
+    function updatePitch() {
+        const buffer = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(buffer);
+        const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+        const needle = document.getElementById('needle');
+
+        if (pitch !== -1) {
+            const noteIndex = 12 * (Math.log(pitch / 440) / Math.log(2)) + 69;
+            const rounded = Math.round(noteIndex);
+            const diff = noteIndex - rounded;
+            smoothedDiff += (diff - smoothedDiff) * 0.2;
+
+            document.getElementById('note').innerText = noteStrings[rounded % 12];
+            needle.style.left = `${50 + (smoothedDiff * 100)}%`;
+
+            document.querySelectorAll('.peg').forEach(p => p.classList.remove('active'));
+            let activeId = `peg-${rounded}`;
+            if (currentMode === 'ukulele' && rounded === 64) activeId = 'peg-64-u';
+            const activePeg = document.getElementById(activeId);
+            if (activePeg) activePeg.classList.add('active');
+
+            const inTune = Math.abs(diff) < 0.05;
+            if (inTune) {
+                needle.style.background = "var(--primary)";
+                document.getElementById('note').style.color = "var(--primary)";
+                inTuneTimer++;
+                const now = Date.now();
+                if (inTuneTimer > 20 && (now - lastChimeTime > 2000)) {
+                    playTone(880, true);
+                    lastChimeTime = now;
+                }
+            } else {
+                needle.style.background = "var(--danger)";
+                document.getElementById('note').style.color = "var(--text)";
+                inTuneTimer = 0;
+            }
+        }
+        requestAnimationFrame(updatePitch);
+    }
+
+    function autoCorrelate(buffer, sampleRate) {
+        let rms = 0;
+        for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
+        if (Math.sqrt(rms / buffer.length) < 0.005) return -1;
+        let c = new Float32Array(buffer.length).fill(0);
+        for (let i = 0; i < buffer.length; i++) {
+            for (let j = 0; j < buffer.length - i; j++) c[i] = c[i] + buffer[j] * buffer[j + i];
+        }
+        let d = 0; while (c[d] > c[d + 1]) d++;
+        let maxval = -1, maxpos = -1;
+        for (let i = d; i < buffer.length; i++) {
+            if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+        }
+        return sampleRate / maxpos;
+    }
+
+    loadPreferences();
+</script>
+</body>
+</html>
